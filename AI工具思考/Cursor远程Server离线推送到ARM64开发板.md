@@ -1,0 +1,324 @@
+> **解决的问题**：Cursor 客户端一升级，局域网内 RK3588（ARM64 Ubuntu）开发板上的 Remote Server 就要重新从官方 CDN 下载；国内网络经常拉不下来。本文记录「Windows 本机手动下载 tar.gz → 脚本 scp 推送并解压」的离线安装流程。
+
+## 背景
+
+Cursor 通过 **Remote SSH** 连开发板时，会在远端安装 `cursor-reh-linux-arm64`，目录结构为：
+
+```text
+~/.cursor-server/bin/linux-arm64/<40位commit>/
+```
+
+常见失败原因：
+
+| 原因 | 表现 |
+|------|------|
+| 开发板无外网或访问 `downloads.cursor.com` 不稳定 | SSH 连接卡在 Installing / Downloading Server |
+| 本机 Cursor 已升级，远端仍是旧 commit | 连接报 **version mismatch** |
+| 下载不完整 | 解压失败或 node 不可执行 |
+
+思路：**在 Windows 本机**（网络通常更好）先下载与客户端 commit 一致的 ARM64 包，再用 `scp` + `ssh` 推到开发板指定目录，Cursor 重连时直接命中本地 Server，不再依赖开发板在线下载。
+
+## 前置条件
+
+| 环境 | 要求 |
+|------|------|
+| Windows | 已安装 [Cursor](https://cursor.com)，且 `cursor` 在 PATH 中 |
+| Windows | OpenSSH 客户端（`ssh`、`scp`）；Windows 10+ 自带 `tar` |
+| 开发板 | `aarch64` / `arm64`，Ubuntu，可 SSH 登录 |
+| 网络 | **本机**能访问 `https://downloads.cursor.com`（开发板可无外网） |
+
+脚本原始位置（可拷贝到任意目录使用）：
+
+```text
+D:\wpf\working\qingyun\doc\远程安装ubuntu程序\推送cursor到开发板\
+├── install-cursor-server.ps1
+└── cursor-reh-linux-arm64.tar.gz   # 需自行下载，不放仓库
+```
+
+## 操作流程
+
+### 1. 查本机 Cursor 的 commit
+
+每次 **升级 Cursor 后**都要重做后续步骤。PowerShell 执行：
+
+```powershell
+cursor --version
+```
+
+输出示例：
+
+```text
+2.x.x
+81fcf2931d7687b4ff3f3017858d0c6dee7e2a68
+```
+
+**第二行** 40 位十六进制即为 commit，必须与远端 Server 一致。
+
+### 2. 本机下载 ARM64 服务端
+
+URL 模板（注意扩展名是 `.tar.gz`）：
+
+```text
+https://downloads.cursor.com/production/<commit>/linux/arm64/cursor-reh-linux-arm64.tar.gz
+```
+
+示例：
+
+```text
+https://downloads.cursor.com/production/81fcf2931d7687b4ff3f3017858d0c6dee7e2a68/linux/arm64/cursor-reh-linux-arm64.tar.gz
+```
+
+下载后：
+
+1. 保存为 `cursor-reh-linux-arm64.tar.gz`
+2. 与 `install-cursor-server.ps1` 放在**同一目录**
+3. 确认体积 **大于 50MB**（过小多为不完整）
+
+若 URL 404：部分版本 commit 末两位有变体，脚本在校验失败时会打印备用 URL；仍以与本机 `cursor --version` 一致的包为准。
+
+### 3. 配置开发板地址（按需）
+
+默认目标：`cat@10.7.5.112`。可改脚本顶部默认值，或运行时传参：
+
+```powershell
+.\install-cursor-server.ps1 -RemoteHost 192.168.1.100 -User youruser
+```
+
+### 4. 运行安装脚本
+
+在 PowerShell 中（若遇执行策略限制，先 `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`）：
+
+```powershell
+# 方式 A：cd 到脚本目录
+.\install-cursor-server.ps1
+
+# 方式 B：拖 install-cursor-server.ps1 进 PowerShell 窗口后回车
+
+# 指定 tar 路径或 commit
+.\install-cursor-server.ps1 -LocalTar "D:\path\cursor-reh-linux-arm64.tar.gz" -Commit "81fcf2931d7687b4ff3f3017858d0c6dee7e2a68"
+```
+
+脚本会自动：
+
+1. 从 `cursor --version` 读取客户端 commit（或用 `-Commit`）
+2. 读取 tar 内 `product.json`，校验 commit 一致（不一致则拒绝，避免 version mismatch）
+3. `scp` 上传到开发板 `/tmp`
+4. 解压到 `~/.cursor-server/bin/linux-arm64/<commit>/`（strip 顶层 `vscode-reh-linux-arm64/`）
+5. 校验远端 `node` 可执行
+
+| 参数 | 说明 |
+|------|------|
+| `-RemoteHost` / `-User` | 目标 IP 与 SSH 用户 |
+| `-LocalTar` | tar.gz 路径（默认同目录 `cursor-reh-linux-arm64.tar.gz`） |
+| `-Commit` | 手动指定 commit（无 `cursor` CLI 时用） |
+| `-SkipVersionCheck` | 跳过 commit 校验（不推荐） |
+
+### 5. Cursor 重连
+
+1. Cursor → **Remote SSH** 连接同一主机（如 `cat@10.7.5.112`）
+2. 若仍提示安装 Server，再连一次；应直接使用已解压目录
+3. 以后每次 **本机 Cursor 升级**，重复步骤 1～4
+
+## 安装脚本（install-cursor-server.ps1）
+
+保存为 `install-cursor-server.ps1`，与 tar.gz 同目录：
+
+```powershell
+# install-cursor-server.ps1
+# Upload local cursor-reh-linux-arm64.tar.gz and extract for Cursor Remote SSH.
+# Target layout: ~/.cursor-server/bin/linux-arm64/<commit>/
+
+param(
+  [string]$User = "cat",
+  [string]$RemoteHost = "10.7.5.112",
+  [string]$LocalTar = "",
+  [string]$Commit = "",
+  [switch]$SkipVersionCheck
+)
+
+$ErrorActionPreference = "Stop"
+
+if ([string]::IsNullOrWhiteSpace($LocalTar)) {
+  $LocalTar = Join-Path $PSScriptRoot "cursor-reh-linux-arm64.tar.gz"
+}
+
+$Remote = "{0}@{1}" -f $User, $RemoteHost
+$RemoteTmp = "/tmp/cursor-reh-linux-arm64.tar.gz"
+
+function Get-CursorCommit {
+  if (!(Get-Command cursor -ErrorAction SilentlyContinue)) {
+    throw "cursor CLI not found in PATH. Install Cursor or pass -Commit <hash>."
+  }
+  $lines = @(cursor --version 2>&1 | ForEach-Object { "$_".Trim() } | Where-Object { $_ })
+  if ($lines.Count -lt 2) {
+    throw "Unexpected output from 'cursor --version'. Pass -Commit <hash> manually."
+  }
+  $hash = $lines[1]
+  if ($hash -notmatch '^[0-9a-f]{40}$') {
+    throw "Could not parse commit from cursor --version: $hash"
+  }
+  return $hash
+}
+
+function Get-TarballCommit {
+  param([Parameter(Mandatory = $true)][string]$TarPath)
+
+  if (!(Get-Command tar -ErrorAction SilentlyContinue)) {
+    throw "tar.exe not found. Cannot read commit from tarball product.json."
+  }
+
+  $productJson = & tar -xOf $TarPath vscode-reh-linux-arm64/product.json 2>$null
+  if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($productJson)) {
+    throw "Cannot read vscode-reh-linux-arm64/product.json from: $TarPath"
+  }
+
+  $m = [regex]::Match($productJson, '"commit"\s*:\s*"([0-9a-f]{40})"')
+  if ($m.Success) {
+    return $m.Groups[1].Value
+  }
+  throw "Cannot parse commit from tarball product.json: $TarPath"
+}
+
+function Get-CursorServerDownloadUrls {
+  param([string]$ClientCommit)
+
+  $urls = @(
+    "https://downloads.cursor.com/production/$ClientCommit/linux/arm64/cursor-reh-linux-arm64.tar.gz"
+  )
+  if ($ClientCommit.Length -ge 2) {
+    $realCommit = $ClientCommit.Substring(0, $ClientCommit.Length - 2) + "1f"
+    $urls += "https://downloads.cursor.com/production/$realCommit/linux/arm64/cursor-reh-linux-arm64.tar.gz"
+  }
+  return $urls
+}
+
+if ([string]::IsNullOrWhiteSpace($Commit)) {
+  $Commit = Get-CursorCommit
+}
+
+$RemoteInstallDir = "/home/$User/.cursor-server/bin/linux-arm64/$Commit"
+
+if (!(Test-Path -LiteralPath $LocalTar)) {
+  throw "Local tarball not found: $LocalTar"
+}
+
+$localSize = (Get-Item -LiteralPath $LocalTar).Length
+if ($localSize -lt 50MB) {
+  throw "Local tarball looks too small ($localSize bytes): $LocalTar"
+}
+
+$tarCommit = Get-TarballCommit -TarPath $LocalTar
+if ($tarCommit -ne $Commit) {
+  $urlList = (Get-CursorServerDownloadUrls -ClientCommit $Commit | ForEach-Object { "  $_" }) -join [Environment]::NewLine
+  $msg = @"
+Tarball commit mismatch (causes 'version mismatch' on connect).
+  Cursor client commit : $Commit
+  Tarball commit       : $tarCommit
+  File                 : $LocalTar
+
+Download the matching ARM64 server, replace the local tar.gz, then rerun.
+
+Suggested download URLs:
+$urlList
+"@
+  if ($SkipVersionCheck) {
+    Write-Warning $msg
+    Write-Warning "Continuing because -SkipVersionCheck was set."
+  }
+  else {
+    throw $msg
+  }
+}
+
+if (!(Get-Command ssh -ErrorAction SilentlyContinue)) {
+  throw "ssh.exe not found. Install OpenSSH Client (Optional features)."
+}
+if (!(Get-Command scp -ErrorAction SilentlyContinue)) {
+  throw "scp.exe not found. Install OpenSSH Client (Optional features)."
+}
+
+Write-Host "Local Cursor commit : $Commit"
+Write-Host "Tarball commit      : $tarCommit"
+Write-Host "Local tarball       : $LocalTar ($([math]::Round($localSize / 1MB, 1)) MB)"
+Write-Host "Remote install dir  : $RemoteInstallDir"
+Write-Host ""
+
+Write-Host "Step 1/3: upload tarball to remote /tmp ..."
+& scp -q "$LocalTar" "${Remote}:${RemoteTmp}"
+if ($LASTEXITCODE -ne 0) {
+  throw "scp upload failed with exit code $LASTEXITCODE"
+}
+
+$RemoteCommand = @"
+set -euo pipefail
+ARCH=`$(uname -m)
+if [ "`$ARCH" != "aarch64" ] && [ "`$ARCH" != "arm64" ]; then
+  echo "ERROR: expected aarch64/arm64, got `$ARCH" >&2
+  exit 1
+fi
+mkdir -p '$RemoteInstallDir'
+rm -rf '$RemoteInstallDir'/*
+tar -xzf '$RemoteTmp' -C '$RemoteInstallDir' --strip-components=1
+rm -f '$RemoteTmp'
+if [ ! -x '$RemoteInstallDir/node' ]; then
+  echo "ERROR: node binary missing after extract: '$RemoteInstallDir/node'" >&2
+  exit 1
+fi
+INSTALLED_COMMIT=`$(python3 -c "import json; print(json.load(open('$RemoteInstallDir/product.json'))['commit'])" 2>/dev/null || true)
+if [ -n "`$INSTALLED_COMMIT" ] && [ "`$INSTALLED_COMMIT" != '$Commit' ]; then
+  echo "ERROR: installed server commit `$INSTALLED_COMMIT != expected $Commit" >&2
+  exit 1
+fi
+echo "Extract OK:"
+ls -la '$RemoteInstallDir'
+"@
+
+$RemoteScriptLocal = Join-Path $env:TEMP "install-cursor-server-remote.sh"
+$RemoteScriptRemote = "/tmp/install-cursor-server-remote.sh"
+$RemoteCommandUnix = ($RemoteCommand -replace "`r`n", "`n" -replace "`r", "`n")
+$Utf8NoBom = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllText($RemoteScriptLocal, $RemoteCommandUnix, $Utf8NoBom)
+
+Write-Host "Step 2/3: extract on remote (strip top-level vscode-reh-linux-arm64/) ..."
+& scp -q "$RemoteScriptLocal" "${Remote}:${RemoteScriptRemote}"
+if ($LASTEXITCODE -ne 0) {
+  throw "scp remote script failed with exit code $LASTEXITCODE"
+}
+& ssh $Remote "bash $RemoteScriptRemote && rm -f $RemoteScriptRemote"
+if ($LASTEXITCODE -ne 0) {
+  throw "Remote extract failed with exit code $LASTEXITCODE"
+}
+Remove-Item -LiteralPath $RemoteScriptLocal -Force -ErrorAction SilentlyContinue
+
+Write-Host ""
+Write-Host "Step 3/3: done."
+Write-Host ("Reconnect in Cursor via SSH: {0}" -f $Remote)
+Write-Host ("Server path: {0}" -f $RemoteInstallDir)
+```
+
+## 故障排查
+
+| 现象 | 处理 |
+|------|------|
+| `Tarball commit mismatch` | 用当前 `cursor --version` 的 commit 重新下载 tar.gz |
+| `Local tarball not found` | 确认 tar 与脚本同目录，或 `-LocalTar` 指定路径 |
+| `ssh` / `scp` 找不到 | Windows「可选功能」安装 OpenSSH 客户端 |
+| 连接仍 version mismatch | 删除开发板 `~/.cursor-server/bin/linux-arm64/` 下其它 commit 子目录后重装 |
+| 开发板不是 ARM64 | 本流程仅适用 `linux/arm64`；x86_64 需换对应包与路径 |
+
+## 验证
+
+脚本成功结束时输出 `Extract OK` 及远端目录列表。开发板上可手动确认：
+
+```bash
+ls -la ~/.cursor-server/bin/linux-arm64/<你的commit>/node
+~/.cursor-server/bin/linux-arm64/<你的commit>/node --version
+```
+
+随后在 Cursor 中 SSH 连接，应不再长时间卡在 Server 下载阶段。
+
+## 维护习惯
+
+- **Cursor 自动更新后**：先 `cursor --version` → 下载新 tar → 跑脚本 → 再 Remote SSH
+- 可保留最近一两个 commit 的 tar.gz 本机备份，回滚客户端时不用重新找包
+- 开发板无需访问外网，仅需与 Windows 本机在同一局域网且 SSH 可达
