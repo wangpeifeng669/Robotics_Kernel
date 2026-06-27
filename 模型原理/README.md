@@ -1,4 +1,4 @@
-# Model Mechanics · 模型原理
+# 模型原理
 
 ## 模块定位
 
@@ -21,7 +21,7 @@
 ## 目录建议
 
 ```
-Model_Mechanics/
+模型原理/
 ├── transformer/      # 架构细节、变体（MoE、Mamba 等）
 ├── training/         # 训练流程、显存优化、分布式
 ├── inference/        # 推理引擎、vLLM/llama.cpp 等
@@ -31,6 +31,6 @@ Model_Mechanics/
 
 ## 关联模块
 
-- `Voice_Interaction` — 端到端语音模型、ASR/TTS 底层
-- `Edge_Deployment` — 模型裁剪、算子适配与硬件加速
-- `Data_Engineering` — RAG 检索与 Embedding 模型
+- `语音交互/` — 端到端语音模型、ASR/TTS 底层
+- `端侧部署/` — 模型裁剪、算子适配与硬件加速
+- `数据工程/` — RAG 检索与 Embedding 模型

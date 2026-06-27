@@ -1,4 +1,4 @@
-# Data Engineering · 数据工程与 RAG
+# 数据工程与 RAG
 
 ## 模块定位
 
@@ -22,7 +22,7 @@
 ## 目录建议
 
 ```
-Data_Engineering/
+数据工程/
 ├── rag/              # RAG 架构、Pipeline 与配置
 ├── intent/           # 意图识别方案与标注规范
 ├── isolation/        # 数据隔离与向量库分区策略
@@ -32,6 +32,6 @@ Data_Engineering/
 
 ## 关联模块
 
-- `Model_Mechanics` — Embedding 与 Reranker 模型选型
-- `Voice_Interaction` — 语音 query 进入 RAG 的前处理
-- `Business_Multimodal` — 业务域知识与多模态检索
+- `模型原理/` — Embedding 与 Reranker 模型选型
+- `语音交互/` — 语音 query 进入 RAG 的前处理
+- `多模态业务/` — 业务域知识与多模态检索

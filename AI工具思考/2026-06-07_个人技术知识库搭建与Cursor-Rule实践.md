@@ -1,3 +1,5 @@
+# 个人技术知识库搭建与 Cursor Rule 实践
+
 > **解决的问题**：如何从零搭建一套「可检索、可复用、AI 可协作」的个人技术知识库；以及为什么在 Cursor 里必须配置 **Project Rules**，否则 Agent 会把知识库当成普通代码仓库乱改。
 
 ## 背景：为什么需要「知识库仓库」，而不是散落笔记
@@ -28,13 +30,13 @@
 
 ```text
 Robotics_Kernel/
-├── Model_Mechanics/      # 大模型原理、训练推理、量化
-├── Edge_Deployment/      # RK3588、RKNN、板卡部署
-├── Voice_Interaction/    # ASR/TTS/VAD、低延迟
-├── Comm_Architecture/    # UDP/TCP/WebSocket、ROS 通信
-├── Data_Engineering/     # RAG、意图识别、检索评测
-├── Business_Multimodal/  # 多模态业务、交互状态机
-├── Ops_Automation/       # Cursor、网络排查、CI/脚本片段
+├── 模型原理/               # 大模型原理、训练推理、量化
+├── 端侧部署/               # RK3588、RKNN、板卡部署
+├── 语音交互/               # ASR/TTS/VAD、低延迟
+├── 通信架构/               # UDP/TCP/WebSocket、ROS 通信
+├── 数据工程/               # RAG、意图识别、检索评测
+├── 多模态业务/             # 多模态业务、交互状态机
+├── 日常运维/               # Cursor、网络排查、CI/脚本片段
 └── .cursor/
     └── rules/
         └── knowledge-base.mdc
@@ -42,7 +44,7 @@ Robotics_Kernel/
 
 原则：
 
-- **一篇一文一题** — 文件名用中文、短、点明「解决什么问题」，例如 `Cursor远程Server离线推送到ARM64开发板.md`
+- **一篇一文一题** — 文件名用中文、短、点明「解决什么问题」，例如 `2026-06-07_Cursor远程服务器离线推送到ARM64开发板.md`
 - **目录表达归属** — 正文里不必反复写「本文属于某某模块」
 - **README 轻量** — 模块 README 写定位与典型问题即可，不要写成维基百科
 
@@ -99,7 +101,7 @@ Cursor 会在每次对话时把 `.cursor/rules/` 下的规则注入模型上下�
 ---
 description: 简要说明这条规则做什么（会显示在 Rule 选择器里）
 alwaysApply: true          # 是否每次对话都生效
-globs: Ops_Automation/**/*.md  # 可选：仅匹配特定文件时生效
+globs: 日常运维/**/*.md  # 可选：仅匹配特定文件时生效
 ---
 
 # 规则正文（Markdown）
@@ -155,7 +157,7 @@ alwaysApply: true
 
 ### Rule 编写原则（与官方建议一致）
 
-1. **一条规则一个关切** — 元规则（仓库性质）与领域规则（如「Edge_Deployment 文章必含板卡型号表」）分开
+1. **一条规则一个关切** — 元规则（仓库性质）与领域规则（如「端侧部署 文章必含板卡型号表」）分开
 2. **短而可执行** — 理想单文件 &lt; 50 行；用表格和 ✅/❌ 示例，少写套话
 3. **可迭代** — Rule 本身进 Git；踩坑后改 Rule，全仓库 Agent 行为一起升级
 4. **与 User Rules 分工** — User Rules 管个人偏好（语言、提交习惯）；Project Rules 管**这个仓库是什么**
@@ -165,11 +167,11 @@ alwaysApply: true
 ```markdown
 ---
 description: 端侧部署文章必含验证清单
-globs: Edge_Deployment/**/*.md
+globs: 端侧部署/**/*.md
 alwaysApply: false
 ---
 
-# Edge_Deployment 文章补充约定
+# 端侧部署 文章补充约定
 - 必须写明目标板卡型号与系统版本
 - 步骤末尾要有「如何确认部署成功」的小节
 ```
@@ -191,7 +193,7 @@ flowchart LR
 
 推荐习惯：
 
-1. **先 `@模块目录` 再提问** — 如 `@Ops_Automation 写一篇 xxx`，减少放错目录
+1. **先 `@模块目录` 再提问** — 如 `@日常运维 写一篇 xxx`，减少放错目录
 2. **扩写旧文时 @ 具体文件** — Agent 会延续该文结构与术语
 3. **Rule 报错即改 Rule** — 若 Agent 又建了 `.py`，说明 Rule 不够显式，补一句「禁止」比 Chat 里骂一句有效
 4. **Commit message 写「为什么记这篇」** — 方便日后 `git log` 当索引
@@ -202,7 +204,7 @@ flowchart LR
 
 在新 clone 的仓库或改完 Rule 后，用三则探针 prompt 自测：
 
-1. 「帮我写一篇 RKNN 转换踩坑笔记」→ 应只生成一个 `.md`，且在 `Edge_Deployment/`，中文文件名
+1. 「帮我写一篇 RKNN 转换踩坑笔记」→ 应只生成一个 `.md`，且在 `端侧部署/`，中文文件名
 2. 「把文里的安装命令抽成脚本文件」→ 应拒绝或把脚本内容留在 Markdown 代码块内，不新建 `.sh`
 3. 「给这个项目加单元测试目录」→ 应说明这是知识库而非产品仓库，不建 `tests/`
 

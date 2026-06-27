@@ -1,4 +1,4 @@
-# Voice Interaction · 语音交互
+# 语音交互
 
 ## 模块定位
 
@@ -21,7 +21,7 @@
 ## 目录建议
 
 ```
-Voice_Interaction/
+语音交互/
 ├── architecture/     # 链路架构图、时序设计
 ├── asr/              # 语音识别方案与 benchmark
 ├── tts/              # 语音合成与音色管理
@@ -31,6 +31,6 @@ Voice_Interaction/
 
 ## 关联模块
 
-- `Comm_Architecture` — 语音流与控制指令的传输通道
-- `Model_Mechanics` — 端到端语音大模型原理
-- `Edge_Deployment` — 端侧 ASR/TTS 部署与算力约束
+- `通信架构/` — 语音流与控制指令的传输通道
+- `模型原理/` — 端到端语音大模型原理
+- `端侧部署/` — 端侧 ASR/TTS 部署与算力约束

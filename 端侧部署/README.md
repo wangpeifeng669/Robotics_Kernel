@@ -1,4 +1,4 @@
-# Edge Deployment · 端侧部署与硬件适配
+# 端侧部署与硬件适配
 
 ## 模块定位
 
@@ -21,7 +21,7 @@
 ## 目录建议
 
 ```
-Edge_Deployment/
+端侧部署/
 ├── rk3588/           # RK3588 工具链、RKNN 转换与 benchmark
 ├── digua/            # 地瓜开发板专项笔记
 ├── operator_fix/     # 算子兼容性问题与解决方案
@@ -31,6 +31,6 @@ Edge_Deployment/
 
 ## 关联模块
 
-- `Model_Mechanics` — 量化、剪枝等模型侧优化
-- `Comm_Architecture` — 端侧与云端/PC 的通信边界
-- `Ops_Automation` — 环境脚本、驱动安装与排障
+- `模型原理/` — 量化、剪枝等模型侧优化
+- `通信架构/` — 端侧与云端/PC 的通信边界
+- `日常运维/` — 环境脚本、驱动安装与排障

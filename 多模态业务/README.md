@@ -1,4 +1,4 @@
-# Business Multimodal · 业务多模态
+# 业务多模态
 
 ## 模块定位
 
@@ -21,7 +21,7 @@
 ## 目录建议
 
 ```
-Business_Multimodal/
+多模态业务/
 ├── motion/           # 动作库、时间轴、对齐算法
 ├── live/             # 直播架构、OBS/RTMP、互动协议
 ├── state_machine/    # 业务状态机与场景配置
@@ -31,6 +31,6 @@ Business_Multimodal/
 
 ## 关联模块
 
-- `Voice_Interaction` — 语音驱动动作与回复时序
-- `Comm_Architecture` — 直播推流与控制信令
-- `Data_Engineering` — 业务知识库与 RAG 话术
+- `语音交互/` — 语音驱动动作与回复时序
+- `通信架构/` — 直播推流与控制信令
+- `数据工程/` — 业务知识库与 RAG 话术

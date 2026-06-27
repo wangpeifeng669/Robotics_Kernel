@@ -1,4 +1,4 @@
-# Comm Architecture · 通信架构
+# 通信架构
 
 ## 模块定位
 
@@ -22,7 +22,7 @@
 ## 目录建议
 
 ```
-Comm_Architecture/
+通信架构/
 ├── protocols/        # 各协议对比与选型决策
 ├── ros/              # ROS1/ROS2 节点设计与 launch
 ├── websocket/        # WS 网关、心跳、重连
@@ -32,6 +32,6 @@ Comm_Architecture/
 
 ## 关联模块
 
-- `Voice_Interaction` — 语音与控制流的传输载体
-- `Edge_Deployment` — 局域网私有化部署下的网络拓扑
-- `Ops_Automation` — 网络排查与防火墙/端口配置
+- `语音交互/` — 语音与控制流的传输载体
+- `端侧部署/` — 局域网私有化部署下的网络拓扑
+- `日常运维/` — 网络排查与防火墙/端口配置
