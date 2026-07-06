@@ -17,6 +17,9 @@
 - 2026-06-30_端侧语音交互部署差异与NPU-BPU架构解析.md — PC 端 vs 端侧部署差异
 - 2026-07-04_qwen3-tts-4090独占部署效果验证.md — 公司主机 4090 TTS 独占部署，验证消除 LLM 竞争后延迟从 280ms 降至 68ms
 
+## 通信架构目录已有文章
+- 2026-07-06_机器人研发常用通信方式与选型指南.md — HTTP/HTTPS/WebSocket/MQTT/UDP/TCP/ROS2 Topic 七种主流协议 + gRPC/CAN/串口/ZMQ/MAVLink/Modbus 补充，含选型决策框架与实战架构示例
+
 ## Qwen3-TTS 部署演进线
 1. 阿里云 ECS 4090：TTS+LLM 共存，TTFA ~280ms（公网），效果差
 2. 公司主机 4090：TTS 独占，TTFA ~68ms（回环），1-6 路可用
