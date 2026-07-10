@@ -21,6 +21,10 @@
 ## 通信架构目录已有文章
 - 2026-07-06_机器人研发常用通信方式与选型指南.md — HTTP/HTTPS/WebSocket/MQTT/UDP/TCP/ROS2 Topic 七种主流协议 + gRPC/CAN/串口/ZMQ/MAVLink/Modbus 补充，含选型决策框架与实战架构示例
 
+## 前沿分析目录已有文章
+- 2026-06-08_AI编程三代范式演进.md — Tab Coding → Vibe Coding → Spec Coding 三代演进
+- 2026-07-09_Cursor接入Grok4.5模型-效果与计费解析.md — Grok 4.5 效果定位、计费机制（订阅池非API）、与 Composer 2.5 Fast 费用/效果对比、Cursor 思考等级标识含义、选型建议
+
 ## 个人哲思目录已有文章
 - 2026-06-07_直面灵魂.md
 - 2026-06-09_因果报应是真的吗.md
