@@ -10,20 +10,32 @@ import re
 import sys
 import tempfile
 
-# 分类顺序与展示元数据（icon 对应模板内 SVG 精灵）
+# 分类顺序、副标题、图标、颜色、分类页顶部简介。简介写死，不读各目录 README。
 CATEGORY_META = [
-    ("语音交互", "语音交互 Pipeline：ASR / VAD / TTS / 唤醒", "mic", "#0d9488"),
-    ("端侧部署", "边缘设备模型部署：RK3588 / 量化 / 推理优化", "chip", "#0891b2"),
-    ("模型原理", "模型架构与原理：Transformer / 注意力 / 量化", "brain", "#2563eb"),
-    ("模型训练", "预训练、微调、数据准备与调参实验", "chart", "#7c3aed"),
-    ("数据工程", "数据处理、特征工程、RAG 与向量数据库", "database", "#d97706"),
-    ("通信架构", "板级通信、网络协议与服务架构", "network", "#dc2626"),
-    ("多模态业务", "VLM、视觉问答与多模态业务集成", "layers", "#db2777"),
-    ("智能体开发", "Agent 编排：LangGraph / CrewAI / AutoGen", "agent", "#9333ea"),
-    ("前沿分析", "行业前沿、范式演进与工具动态", "trend", "#4f46e5"),
-    ("AI工具思考", "AI 辅助开发的使用思考与方法论", "tool", "#65a30d"),
-    ("日常运维", "运维自动化、CI/CD、镜像与部署脚本", "server", "#64748b"),
-    ("个人哲思", "佛学、道德经、哲学与心理学的实践感悟", "book", "#b45309"),
+    ("语音交互", "语音交互 Pipeline：ASR / VAD / TTS / 唤醒", "mic", "#0d9488",
+     "机器人从采音、VAD、ASR 到 TTS 的整条链路，重点是低延迟和嘈杂环境下怎么收得稳。"),
+    ("端侧部署", "边缘设备模型部署：RK3588 / 量化 / 推理优化", "chip", "#0891b2",
+     "模型落到 RK3588 等板子上的转换、量化和实测，包括工具链报错和性能取舍。"),
+    ("模型原理", "模型架构与原理：Transformer / 注意力 / 量化", "brain", "#2563eb",
+     "把推理、量化、注意力和声码器拆开，说明它们在端侧上为什么这样算。"),
+    ("模型训练", "预训练、微调、数据准备与调参实验", "chart", "#7c3aed",
+     "预训练、微调和数据准备里实际跑过的实验与调参记录。"),
+    ("数据工程", "数据处理、特征工程、RAG 与向量数据库", "database", "#d97706",
+     "RAG、检索和知识库怎么建，以及数据怎么隔离、怎么评测。"),
+    ("通信架构", "板级通信、网络协议与服务架构", "network", "#dc2626",
+     "板子和模块之间用什么协议通信，以及 TCP、UDP、QUIC 怎么选型。"),
+    ("多模态业务", "VLM、视觉问答与多模态业务集成", "layers", "#db2777",
+     "视觉、语言和业务状态怎么接在一起，包括肢体对齐和交互流程。"),
+    ("智能体开发", "Agent 编排：LangGraph / CrewAI / AutoGen", "agent", "#9333ea",
+     "用状态机和编排框架把多个步骤串成智能体的做法。"),
+    ("前沿分析", "行业前沿、范式演进与工具动态", "trend", "#4f46e5",
+     "工具和范式变化里，哪些值得跟、哪些先不用动。"),
+    ("AI工具思考", "AI 辅助开发的使用思考与方法论", "tool", "#65a30d",
+     "用 AI 写代码和管知识库时的用法、边界，以及踩过的坑。"),
+    ("日常运维", "运维自动化、CI/CD、镜像与部署脚本", "server", "#64748b",
+     "镜像、部署和开发环境里反复用到的操作。"),
+    ("个人哲思", "佛学、道德经、哲学与心理学的实践感悟", "book", "#b45309",
+     "工作和生活里真实发生的感悟，不摘抄，只写自己印证过的判断。"),
 ]
 META_BY_NAME = {item[0]: item for item in CATEGORY_META}
 
@@ -108,42 +120,38 @@ def parse_doc(category, path, rel):
     }
 
 
-def scan_category(root, name, full, docs, intros):
+def scan_category(root, name, full, docs):
     for current, _, files in os.walk(full):
         for filename in files:
-            if not filename.endswith(".md"):
+            if not filename.endswith(".md") or filename.lower() == "readme.md":
                 continue
             path = os.path.join(current, filename)
             rel = os.path.relpath(path, root).replace("\\", "/")
-            if filename.lower() == "readme.md":
-                intros[name] = strip_frontmatter(read_text(path))
-                continue
             docs.append(parse_doc(name, path, rel))
 
 
 def scan_repo(root):
     """只收录分类元数据里登记过的目录，避免把工具缓存扫进网页。"""
     docs = []
-    intros = {}
     for name in os.listdir(root):
         full = os.path.join(root, name)
         if not os.path.isdir(full) or name.startswith("."):
             continue
         if name not in META_BY_NAME:
             continue
-        scan_category(root, name, full, docs, intros)
-    return docs, intros
+        scan_category(root, name, full, docs)
+    return docs
 
 
-def build_categories(intros, docs):
+def build_categories(docs):
     counter = {}
     for doc in docs:
         name = doc["cat"]
         counter[name] = counter.get(name, 0) + 1
     categories = []
-    for name, desc, icon, color in CATEGORY_META:
+    for name, desc, icon, color, intro in CATEGORY_META:
         count = counter.get(name, 0)
-        if count == 0 and name not in intros:
+        if count == 0:
             continue
         categories.append({
             "name": name,
@@ -151,7 +159,7 @@ def build_categories(intros, docs):
             "icon": icon,
             "color": color,
             "count": count,
-            "intro": intros.get(name, ""),
+            "intro": intro,
         })
     return categories
 
@@ -208,8 +216,8 @@ def print_stats(categories, docs, out_html, html):
 
 def main():
     root = kernel_root()
-    docs, intros = scan_repo(root)
-    categories = build_categories(intros, docs)
+    docs = scan_repo(root)
+    categories = build_categories(docs)
     assign_ids(docs)
     about = strip_frontmatter(read_text(os.path.join(root, "README.md")))
     html = render(categories, docs, about)
