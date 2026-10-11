@@ -193,6 +193,8 @@ def write_atomic(path, html):
         if os.path.exists(tmp):
             os.remove(tmp)
         raise
+    # mkstemp 默认 600，httpd 以 apache 用户读页面，必须放开为 644
+    os.chmod(path, 0o644)
 
 
 def print_stats(categories, docs, out_html, html):
