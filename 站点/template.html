@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>技术文档库 · Robotics Kernel</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230d9488' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2 21 7v10l-9 5-9-5V7z'/%3E%3Ccircle cx='12' cy='12' r='2.5'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Noto+Serif+SC:wght@600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --ink:#101820; --ink-2:#0c1319; --ink-3:#17222d;
+  --side-text:#93a4b2; --side-active:#ffffff;
+  --paper:#f4f6f5; --card:#ffffff;
+  --text:#1d2833; --text-2:#5a6a77; --text-3:#8a98a3;
+  --line:#e2e7e6; --line-2:#ecefef;
+  --accent:#0d9488; --accent-d:#0b7a70; --accent-soft:#e6f4f2;
+  --radius:12px;
+  --shadow:0 1px 2px rgba(16,24,32,.05),0 4px 14px rgba(16,24,32,.06);
+  --shadow-h:0 6px 18px rgba(16,24,32,.08),0 14px 34px rgba(13,148,136,.14);
+  --font:"Noto Sans SC",-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+  --serif:"Noto Serif SC","Songti SC","SimSun",serif;
+  --mono:"JetBrains Mono",Consolas,"Courier New",monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:var(--font);background:var(--paper);color:var(--text);font-size:14px;line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+::selection{background:rgba(13,148,136,.22)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#c6cfce;border-radius:6px;border:2px solid var(--paper)}
+::-webkit-scrollbar-thumb:hover{background:#aab6b5}
+
+/* ===== 顶部阅读进度条 ===== */
+.progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:60;background:linear-gradient(90deg,var(--accent),#38bdf8);box-shadow:0 0 8px rgba(13,148,136,.5);transition:width .12s linear}
+
+/* ===== 侧栏 ===== */
+.sidebar-shell{position:fixed;top:0;left:0;bottom:0;width:264px;z-index:50;overflow:hidden}
+.sidebar{position:absolute;top:0;left:0;bottom:0;width:264px;background:var(--ink);display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:11px;padding:22px 20px 16px}
+.brand-mark{width:38px;height:38px;flex:none;color:var(--accent);filter:drop-shadow(0 2px 6px rgba(13,148,136,.4))}
+.brand-title{font-size:16px;font-weight:700;color:#fff;letter-spacing:.5px;line-height:1.3}
+.brand-sub{font-family:var(--mono);font-size:9.5px;letter-spacing:2px;color:var(--side-text);margin-top:2px}
+.search-wrap{padding:4px 16px 14px}
+.search-box{position:relative;display:flex;align-items:center}
+.search-box svg{position:absolute;left:11px;width:15px;height:15px;color:var(--text-3);pointer-events:none}
+.search-box input{width:100%;height:38px;background:var(--ink-3);border:1px solid #24323f;border-radius:9px;color:#e8eef1;font-size:13px;padding:0 12px 0 35px;outline:none;transition:border-color .2s,background .2s}
+.search-box input::placeholder{color:#667785}
+.search-box input:focus{border-color:var(--accent);background:#1b2732}
+.nav-scroll{flex:1;overflow-y:auto;padding:0 12px 18px}
+.nav-label{font-size:10.5px;letter-spacing:2px;color:#5d6e7b;padding:10px 10px 6px}
+.nav-item{position:relative;display:flex;align-items:center;gap:10px;width:100%;height:38px;padding:0 10px;border-radius:9px;color:var(--side-text);font-size:13.5px;font-weight:400;transition:color .2s,background .2s;overflow:hidden}
+.nav-item svg{width:17px;height:17px;flex:none;transition:transform .2s}
+.nav-item .nav-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav-item .nav-count{font-family:var(--mono);font-size:10.5px;color:#728392;background:#1c2833;padding:1px 7px;border-radius:20px;transition:all .2s}
+.nav-item::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--accent);transform:scaleY(0);transition:transform .25s cubic-bezier(.4,0,.2,1)}
+.nav-item:hover{color:#d7e1e7;background:#18242f}
+.nav-item:hover svg{transform:scale(1.12)}
+.nav-item.active{color:var(--side-active);background:linear-gradient(90deg,rgba(13,148,136,.18),rgba(13,148,136,.04))}
+.nav-item.active::before{transform:scaleY(1)}
+.nav-item.active .nav-count{color:#fff;background:var(--accent)}
+.nav-divider{height:1px;background:#1e2a35;margin:8px 10px}
+
+/* ===== 主区域 ===== */
+.main{margin-left:264px;min-height:100vh;display:flex;flex-direction:column}
+.topbar{display:none;align-items:center;gap:12px;height:54px;padding:0 16px;background:var(--ink);position:sticky;top:0;z-index:40}
+.topbar svg{width:22px;height:22px;color:#fff}
+.topbar-title{font-size:15px;font-weight:700;color:#fff}
+.overlay{display:none;position:fixed;inset:0;background:rgba(10,16,20,.5);z-index:45;opacity:0;transition:opacity .3s}
+.overlay.show{opacity:1}
+.view{flex:1;animation:viewIn .35s cubic-bezier(.22,.8,.36,1)}
+@keyframes viewIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+::view-transition-old(root){animation:vtOld .24s ease both}
+::view-transition-new(root){animation:vtNew .32s cubic-bezier(.22,.8,.36,1) both}
+@keyframes vtOld{to{opacity:0;transform:translateX(-12px)}}
+@keyframes vtNew{from{opacity:0;transform:translateX(14px)}}
+
+/* ===== Hero ===== */
+.hero{position:relative;overflow:hidden;padding:54px 48px 44px;background:linear-gradient(135deg,#0f1a22 0%,#13282d 60%,#0f2a28 100%);color:#fff}
+.hero-grid{position:absolute;inset:0;opacity:.5;
+  background-image:linear-gradient(rgba(120,200,190,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(120,200,190,.09) 1px,transparent 1px);
+  background-size:34px 34px;
+  mask-image:radial-gradient(ellipse 90% 120% at 20% 0%,#000 40%,transparent 100%)}
+.hero-glow{position:absolute;right:-80px;top:-90px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(13,148,136,.35),transparent 65%)}
+.hero-inner{position:relative;max-width:920px}
+.hero-kicker{font-family:var(--mono);font-size:11px;letter-spacing:3px;color:#5fd0c4;margin-bottom:14px}
+.hero h1{font-size:30px;font-weight:900;letter-spacing:1px;line-height:1.35}
+.hero p{margin-top:12px;color:#b9c8c6;font-size:14px;max-width:640px}
+.hero-stats{display:flex;gap:38px;margin-top:28px;flex-wrap:wrap}
+.stat .num{font-size:27px;font-weight:700;font-family:var(--mono);color:#fff;line-height:1}
+.stat .num em{font-style:normal;color:#5fd0c4}
+.stat .lab{font-size:11.5px;color:#8ba09e;margin-top:6px;letter-spacing:1px}
+
+/* ===== 内容容器 ===== */
+.content{padding:34px 48px 60px;max-width:1180px;width:100%}
+.cat-head{display:flex;align-items:flex-start;gap:16px;margin-bottom:8px}
+.cat-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none;color:#fff;box-shadow:0 6px 16px rgba(16,24,32,.18)}
+.cat-icon svg{width:24px;height:24px}
+.cat-head h2{font-size:21px;font-weight:700;letter-spacing:.5px}
+.cat-head .cat-desc{font-size:13px;color:var(--text-2);margin-top:3px}
+.cat-head .cat-count{font-family:var(--mono);font-size:11px;color:var(--accent);background:var(--accent-soft);padding:2px 10px;border-radius:20px;margin-left:10px;vertical-align:middle}
+.cat-intro{margin:18px 0 4px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card);padding:20px 24px;max-height:280px;overflow-y:auto}
+.cat-intro h1{display:none}
+.cat-intro h2{font-size:14px;font-weight:700;margin:14px 0 6px}
+.cat-intro h2:first-child{margin-top:0}
+.cat-intro p,.cat-intro li{font-size:13px;color:var(--text-2)}
+.cat-intro table{font-size:12.5px}
+.cat-intro *+p,.cat-intro *+ul,.cat-intro *+table{margin-top:6px}
+.cat-intro ul{padding-left:20px}
+.section-title{display:flex;align-items:center;gap:10px;margin:28px 0 16px;font-size:13px;font-weight:700;color:var(--text-2);letter-spacing:1px}
+.section-title::after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* ===== 文档卡片 ===== */
+.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.card{position:relative;display:flex;flex-direction:column;width:100%;text-align:left;font-family:inherit;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px 15px;box-shadow:var(--shadow);cursor:pointer;overflow:hidden;
+  opacity:0;animation:cardIn .5s cubic-bezier(.22,.8,.36,1) forwards;
+  transition:transform .28s cubic-bezier(.22,.8,.36,1),box-shadow .28s,border-color .28s}
+.card::after{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),#38bdf8);transform:scaleX(0);transform-origin:left;transition:transform .35s cubic-bezier(.4,0,.2,1)}
+@keyframes cardIn{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:none}}
+.card:hover{transform:translateY(-4px);box-shadow:var(--shadow-h);border-color:transparent}
+.card:hover::after{transform:scaleX(1)}
+.card-meta{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.card-date{font-family:var(--mono);font-size:11px;color:var(--text-3)}
+.card-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text-2);background:var(--paper);padding:1px 9px;border-radius:20px}
+.card-chip .dot{width:6px;height:6px;border-radius:50%}
+.card-title{font-size:15.5px;font-weight:700;line-height:1.5;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card:hover .card-title{color:var(--accent-d)}
+.card-sum{margin-top:7px;font-size:13px;color:var(--text-2);line-height:1.65;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;flex:1}
+.card-foot{display:flex;align-items:center;justify-content:flex-end;gap:5px;margin-top:12px;font-size:12.5px;font-weight:500;color:var(--accent)}
+.card-foot svg{width:14px;height:14px;transition:transform .25s}
+.card:hover .card-foot svg{transform:translateX(4px)}
+
+/* ===== 阅读视图 ===== */
+.reader{padding:30px 48px 70px;display:flex;justify-content:center}
+.article{max-width:780px;width:100%}
+.back-btn{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:500;color:var(--text-2);padding:7px 14px;border:1px solid var(--line);border-radius:20px;background:var(--card);transition:all .2s;margin-bottom:24px}
+.back-btn svg{width:15px;height:15px;transition:transform .2s}
+.back-btn:hover{color:var(--accent);border-color:var(--accent);box-shadow:0 4px 12px rgba(13,148,136,.15)}
+.back-btn:hover svg{transform:translateX(-3px)}
+.article-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.article-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#fff;padding:2px 12px;border-radius:20px}
+.article-chip .dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.7)}
+.article-date{font-family:var(--mono);font-size:11.5px;color:var(--text-3)}
+.article-file{font-family:var(--mono);font-size:11px;color:var(--text-3);width:100%;word-break:break-all}
+.article h1{font-family:var(--serif);font-size:26px;font-weight:700;line-height:1.45;letter-spacing:.5px;margin:6px 0 22px;padding-bottom:18px;border-bottom:2px solid var(--ink)}
+.article h2{font-size:18.5px;font-weight:700;margin:34px 0 12px;padding-left:12px;border-left:4px solid var(--accent);line-height:1.5}
+.article h3{font-size:15.5px;font-weight:700;margin:24px 0 9px}
+.article p{margin:12px 0;font-size:14.5px;color:#2d3a45}
+.article ul,.article ol{margin:12px 0;padding-left:24px}
+.article li{margin:6px 0;font-size:14.5px;color:#2d3a45}
+.article strong{color:var(--text);font-weight:700}
+.article a{border-bottom:1px solid rgba(13,148,136,.4);transition:border-color .2s}
+.article a:hover{border-color:var(--accent)}
+.article hr{border:none;border-top:1px solid var(--line);margin:28px 0}
+.article img{max-width:100%;border-radius:10px;border:1px solid var(--line);margin:14px 0}
+.article code{font-family:var(--mono);font-size:12.5px;background:var(--accent-soft);color:var(--accent-d);padding:2px 6px;border-radius:5px}
+.article pre{background:var(--ink);border-radius:var(--radius);padding:18px 20px;overflow-x:auto;margin:16px 0;box-shadow:0 8px 22px rgba(16,24,32,.18)}
+.article pre code{background:none;color:#d5e2e0;padding:0;font-size:12.5px;line-height:1.75}
+.article blockquote{margin:16px 0;padding:12px 18px;border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;color:var(--text-2)}
+.article blockquote p{margin:5px 0;font-size:13.5px}
+.article table{width:100%;border-collapse:collapse;margin:18px 0;font-size:13px;border-radius:10px;overflow:hidden;box-shadow:0 0 0 1px var(--line)}
+.article th{background:var(--ink);color:#fff;font-weight:500;padding:9px 13px;text-align:left}
+.article td{padding:9px 13px;border-top:1px solid var(--line-2)}
+.article tr:nth-child(even) td{background:#f8faf9}
+.pager{display:flex;gap:14px;margin-top:44px}
+.pager-btn{flex:1;display:flex;flex-direction:column;gap:3px;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card);transition:all .25s;min-width:0}
+.pager-btn:hover{border-color:var(--accent);box-shadow:var(--shadow-h);transform:translateY(-2px)}
+.pager-btn.next{align-items:flex-end;text-align:right}
+.pager-btn.disabled{opacity:.35;pointer-events:none}
+.pager-lab{font-size:11px;color:var(--text-3);display:flex;align-items:center;gap:5px}
+.pager-t{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.empty{text-align:center;padding:70px 20px;color:var(--text-3)}
+.empty svg{width:48px;height:48px;margin-bottom:14px;opacity:.5}
+.empty p{font-size:14px}
+
+/* ===== 响应式 ===== */
+@media (max-width:860px){
+  .sidebar-shell{pointer-events:none}
+  .sidebar{transform:translateX(-100%);transition:transform .32s cubic-bezier(.4,0,.2,1)}
+  .sidebar.open{transform:none;pointer-events:auto}
+  .main{margin-left:0}
+  .topbar{display:flex}
+  .hero{padding:38px 24px 32px}
+  .hero h1{font-size:23px}
+  .content{padding:26px 20px 48px}
+  .reader{padding:22px 18px 50px}
+  .cards{grid-template-columns:1fr}
+  .pager{flex-direction:column}
+  .hero-stats{gap:24px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="overlay" id="overlay"></div>
+
+<!-- ===== 侧栏 ===== -->
+<div class="sidebar-shell">
+<aside class="sidebar" id="sidebar">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 21 7v10l-9 5-9-5V7z"/><circle cx="12" cy="12" r="2.6"/><path d="M12 9.4v5.2M9.4 12h5.2"/></svg>
+    <div><div class="brand-title">技术文档库</div><div class="brand-sub">ROBOTICS KERNEL</div></div>
+  </div>
+  <div class="search-wrap">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="searchInput" placeholder="搜索文档标题、内容…">
+    </div>
+  </div>
+  <nav class="nav-scroll" id="nav"></nav>
+</aside>
+</div>
+
+<!-- ===== 主区域 ===== -->
+<div class="main">
+  <header class="topbar">
+    <button id="menuBtn" aria-label="打开菜单"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    <span class="topbar-title" id="topbarTitle">技术文档库</span>
+  </header>
+  <div id="view" class="view"></div>
+</div>
+
+<!-- ===== 图标精灵 ===== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<defs>
+<symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></symbol>
+<symbol id="i-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><path d="M12 18v4M8 22h8"/></symbol>
+<symbol id="i-chip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></symbol>
+<symbol id="i-brain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10M18 20V4M6 20v-4"/></symbol>
+<symbol id="i-database" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/></symbol>
+<symbol id="i-network" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M12 8v4M12 12H5v4M12 12h7v4"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></symbol>
+<symbol id="i-agent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M12 4h0"/><circle cx="9" cy="13.5" r="1" fill="currentColor"/><circle cx="15" cy="13.5" r="1" fill="currentColor"/><path d="M9 17h6"/></symbol>
+<symbol id="i-trend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></symbol>
+<symbol id="i-tool" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z"/></symbol>
+<symbol id="i-server" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="8" rx="2"/><rect x="2" y="13" width="20" height="8" rx="2"/><path d="M6 7h.01M6 17h.01"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></symbol>
+<symbol id="i-log" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h4"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+<symbol id="i-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
+<symbol id="i-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></symbol>
+</defs>
+</svg>
+
+<script>/*__MARKED__*/</script>
+<script>
+const DATA = "__DATA__";
+const ABOUT = "__ABOUT__";
+const CATS = DATA.categories;
+const DOCS = DATA.docs;
+const catByName = {};
+CATS.forEach(c => catByName[c.name] = c);
+marked.setOptions({ gfm: true, breaks: false });
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const useIcon = n => `<svg><use href="#i-${n}" xlink:href="#i-${n}"></use></svg>`;
+let query = "";
+
+function route() {
+  const p = location.hash.slice(1).split("/").filter(Boolean);
+  if (p[0] === "doc") return { view: "reader", id: +p[1] };
+  if (p[0] === "about") return { view: "about" };
+  if (p[0] === "cat") return { view: "home", cat: decodeURIComponent(p[1]) };
+  return { view: "home", cat: null };
+}
+function withTransition(cb) {
+  if (document.startViewTransition && !matchMedia("(prefers-reduced-motion:reduce)").matches)
+    document.startViewTransition(cb);
+  else cb();
+}
+
+/* ===== 侧栏导航 ===== */
+function renderNav() {
+  const r = route();
+  const readerCat = r.view === "reader" ? (DOCS.find(d => d.id === r.id) || {}).cat : null;
+  let h = `<div class="nav-label">浏览</div>
+    <button class="nav-item ${r.view === "home" && !r.cat ? "active" : ""}" data-go="/">
+      ${useIcon("grid")}<span class="nav-name">全部文档</span><span class="nav-count">${DOCS.length}</span>
+    </button>`;
+  CATS.forEach(c => {
+    const active = (r.view === "home" && r.cat === c.name) || readerCat === c.name;
+    h += `<button class="nav-item ${active ? "active" : ""}" data-go="/cat/${encodeURIComponent(c.name)}">
+      <svg style="color:${active ? c.color : ""}"><use href="#i-${c.icon}" xlink:href="#i-${c.icon}"/></svg>
+      <span class="nav-name">${c.name}</span><span class="nav-count">${c.count}</span>
+    </button>`;
+  });
+  h += `<div class="nav-divider"></div>
+    <button class="nav-item ${r.view === "about" ? "active" : ""}" data-go="/about">
+      ${useIcon("info")}<span class="nav-name">关于知识库</span>
+    </button>`;
+  $("#nav").innerHTML = h;
+}
+
+/* ===== 首页 / 分类 / 搜索 ===== */
+function emptyHTML() {
+  return `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg><p>没有找到相关文档</p></div>`;
+}
+function cardsHTML(list) {
+  if (!list.length) return emptyHTML();
+  return `<div class="cards">` + list.map((d, i) => {
+    const c = catByName[d.cat];
+    return `<button type="button" class="card" data-id="${d.id}" style="animation-delay:${Math.min(i * 45, 450)}ms">
+      <div class="card-meta">
+        <span class="card-date">${d.date || "—"}</span>
+        <span class="card-chip"><span class="dot" style="background:${c.color}"></span>${d.cat}</span>
+      </div>
+      <div class="card-title">${esc(d.title)}</div>
+      <div class="card-sum">${esc(d.summary) || "（无摘要）"}</div>
+      <div class="card-foot">阅读全文 ${useIcon("arrow-right")}</div>
+    </button>`;
+  }).join("") + `</div>`;
+}
+function heroHTML() {
+  const dates = DOCS.map(d => d.date).filter(Boolean).sort();
+  const latest = dates[dates.length - 1];
+  return `<div class="hero">
+    <div class="hero-grid"></div><div class="hero-glow"></div>
+    <div class="hero-inner">
+      <div class="hero-kicker">PERSONAL TECH KNOWLEDGE BASE</div>
+      <h1>机器人研发技术知识库</h1>
+      <p>沉淀端侧 AI 部署、语音交互、模型原理与通信架构的实践记录，把踩过的坑、跑通的方案、想清楚的原理，变成可检索的知识。</p>
+      <div class="hero-stats">
+        <div class="stat"><div class="num" data-count="${DOCS.length}">0</div><div class="lab">技术文档</div></div>
+        <div class="stat"><div class="num" data-count="${CATS.length}">0</div><div class="lab">知识分类</div></div>
+        <div class="stat"><div class="num" style="font-size:19px;padding-top:4px">${latest}</div><div class="lab">最近更新</div></div>
+      </div>
+    </div>
+  </div>`;
+}
+function renderHome(cat) {
+  const q = query.trim().toLowerCase();
+  let list = DOCS.slice();
+  if (cat) list = list.filter(d => d.cat === cat);
+  if (q) list = list.filter(d => (d.title + d.summary + d.content).toLowerCase().includes(q));
+
+  if (cat) {
+    const c = catByName[cat];
+    return `<div class="content">
+      <div class="cat-head">
+        <div class="cat-icon" style="background:${c.color}">${useIcon(c.icon)}</div>
+        <div><h2>${c.name}<span class="cat-count">${c.count} 篇</span></h2>
+        <div class="cat-desc">${c.desc}</div></div>
+      </div>
+      ${c.intro ? `<div class="cat-intro">${marked.parse(c.intro)}</div>` : ""}
+      <div class="section-title">全部文章</div>${cardsHTML(list)}
+    </div>`;
+  }
+  if (q) {
+    return `<div class="content">
+      <div class="section-title">搜索 “${esc(query.trim())}” · 命中 ${list.length} 篇</div>
+      ${cardsHTML(list)}
+    </div>`;
+  }
+  return heroHTML() + `<div class="content">
+    <div class="section-title">最新文档</div>${cardsHTML(list.slice(0, 12))}
+  </div>`;
+}
+
+/* ===== 阅读视图 ===== */
+function renderReader(id) {
+  const d = DOCS.find(x => x.id === id);
+  if (!d) return `<div class="content">${emptyHTML()}</div>`;
+  const c = catByName[d.cat];
+  const order = DOCS.filter(x => x.cat === d.cat).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  const i = order.findIndex(x => x.id === id);
+  const prev = order[i - 1], next = order[i + 1];
+  const body = d.content.replace(/^\s*#\s+.+(\r?\n)/, "");
+  const pagerBtn = (x, dir, label) => x
+    ? `<button class="pager-btn ${dir}" data-id="${x.id}">
+        <span class="pager-lab">${dir === "prev" ? useIcon("arrow-left") : ""}${label}${dir === "next" ? useIcon("arrow-right") : ""}</span>
+        <span class="pager-t">${esc(x.title)}</span>
+      </button>`
+    : `<button class="pager-btn ${dir} disabled"><span class="pager-lab">${label}</span><span class="pager-t">没有了</span></button>`;
+  return `<div class="reader"><div class="article">
+    <button class="back-btn" id="backBtn">${useIcon("arrow-left")}返回列表</button>
+    <div class="article-meta">
+      <span class="article-chip" style="background:${c.color}"><span class="dot"></span>${d.cat}</span>
+      <span class="article-date">${d.date || ""}</span>
+    </div>
+    <h1>${esc(d.title)}</h1>
+    ${marked.parse(body)}
+    <div class="article-file">${esc(d.file)}</div>
+    <div class="pager">${pagerBtn(prev, "prev", "上一篇")}${pagerBtn(next, "next", "下一篇")}</div>
+  </div></div>`;
+}
+function renderAbout() {
+  return `<div class="reader"><div class="article">
+    <button class="back-btn" id="backBtn">${useIcon("arrow-left")}返回首页</button>
+    ${marked.parse(ABOUT)}
+  </div></div>`;
+}
+
+/* ===== 主渲染 ===== */
+function render() {
+  const r = route();
+  renderNav();
+  let html, title;
+  if (r.view === "reader") { html = renderReader(r.id); title = (DOCS.find(d => d.id === r.id) || {}).title || "文档"; }
+  else if (r.view === "about") { html = renderAbout(); title = "关于知识库"; }
+  else { html = renderHome(r.cat); title = r.cat || "技术文档库"; }
+  $("#topbarTitle").textContent = title;
+  withTransition(() => {
+    $("#view").innerHTML = html;
+    window.scrollTo(0, 0);
+    updateProgress();
+    if (r.view === "home" && !r.cat && !query) animateCounters();
+  });
+}
+
+/* ===== 数字滚动 ===== */
+function animateCounters() {
+  document.querySelectorAll("[data-count]").forEach(el => {
+    const target = +el.dataset.count, dur = 900;
+    let start = null;
+    requestAnimationFrame(function step(t) {
+      if (!start) start = t;
+      const p = Math.min((t - start) / dur, 1);
+      el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) requestAnimationFrame(step);
+    });
+  });
+}
+
+/* ===== 阅读进度 ===== */
+function updateProgress() {
+  const bar = $("#progress");
+  if (route().view === "reader") {
+    const st = document.documentElement.scrollTop || document.body.scrollTop;
+    const h = document.documentElement.scrollHeight - innerHeight;
+    bar.style.width = (h > 0 ? st / h *100 : 0) + "%";
+  } else bar.style.width = "0";
+}
+addEventListener("scroll", updateProgress, { passive: true });
+
+/* ===== 事件代理 ===== */
+document.addEventListener("click", e => {
+  const go = e.target.closest("[data-go]");
+  if (go) { location.hash = go.dataset.go; closeSidebar(); return; }
+  const card = e.target.closest(".card");
+  if (card) { location.hash = "/doc/" + card.dataset.id; return; }
+  const pg = e.target.closest(".pager-btn[data-id]");
+  if (pg) { location.hash = "/doc/" + pg.dataset.id; return; }
+  if (e.target.closest("#backBtn")) {
+    const r = route();
+    if (r.view === "reader") {
+      const d = DOCS.find(x => x.id === r.id);
+      location.hash = d ? "/cat/" + encodeURIComponent(d.cat) : "/";
+    } else location.hash = "/";
+  }
+});
+$("#searchInput").addEventListener("input", e => {
+  query = e.target.value;
+  if (route().view !== "home") location.hash = "/";
+  else render();
+});
+
+/* ===== 移动端抽屉 ===== */
+const sidebar = $("#sidebar"), overlay = $("#overlay");
+function openSidebar() {
+  sidebar.classList.add("open");
+  overlay.style.display = "block";
+  requestAnimationFrame(() => overlay.classList.add("show"));
+}
+function closeSidebar() {
+  sidebar.classList.remove("open");
+  overlay.classList.remove("show");
+  setTimeout(() => overlay.style.display = "none", 300);
+}
+$("#menuBtn").addEventListener("click", openSidebar);
+overlay.addEventListener("click", closeSidebar);
+addEventListener("keydown", e => { if (e.key === "Escape") closeSidebar(); });
+
+addEventListener("hashchange", render);
+render();
+</script>
+</body>
+</html>
